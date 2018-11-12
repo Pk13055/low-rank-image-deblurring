@@ -1,0 +1,92 @@
+
+\title{DIP Project Proposal}
+\author{Pratik Kamble}
+
+\begin{document}
+
+\maketitle
+
+
+\section{Technical details}\label{technical-details}
+
+\begin{itemize}
+\tightlist
+\item
+  Project ID: \textbf{40}
+\item
+  Project title: \emph{Computationally efficient image deblurring using
+  low rank image approximation and its GPU implementation}
+\item
+  Original Paper:
+  \href{https://link.springer.com/content/pdf/10.1007\%2Fs11554-015-0539-x.pdf}{Chang
+  et. al}
+\item
+  Project topics: Deblurring and GPU Implementation
+\item
+  Team Members:
+\item
+  Pratik Kamble (\textbf{20161135})
+\item
+  GitHub Link:
+  \href{https://github.com/Pk13055/low-rank-deblurring}{low-rank-deblurring}
+\end{itemize}
+
+\section{Overview}\label{overview}
+
+\begin{itemize}
+\tightlist
+\item
+  This project essentially covers a computationally efficient technique
+  for reduction of blur caused by handshakes in images captured by
+  mobile devices. This technique uses a short-exposure or a low-exposure
+  image that is captured at the same time a normal or auto-exposure
+  image is captured.
+\item
+  The short-exposure image is enhanced by utilizing low rank image
+  approximation of the auto-exposure image without requiring any user
+  specified parameters.
+\item
+  Based on the three quantitative measures of image quality, it is shown
+  that this technique outperforms similar techniques used for image
+  deblurring while it also offers computational efficiency. A GPU
+  implementation of this technique is also reported.
+\item
+  If constraints permit, a comparison between the methods mentioned in
+  the paper and naive deblurring methods may also be presented.
+\end{itemize}
+
+\section{Timeline}\label{timeline}
+
+\begin{longtable}[]{@{}cc@{}}
+\toprule
+Date & Task\tabularnewline
+\midrule
+\endhead
+\textbf{Sept 29th} & \textbf{Proposal Submission}\tabularnewline
+Oct (first week) & Read through paper and setup testing and
+analysis\tabularnewline
+\emph{Oct (second week)} & \emph{Exams}\tabularnewline
+Oct (third week) & Collect additional deblurring method
+data\tabularnewline
+Oct (last week) & Implement efficient low rank algorithm and
+test\tabularnewline
+\textbf{Nov 10th} & \textbf{Midway checkpoint}\tabularnewline
+Nov (last week) & Extend to GPU implementation\tabularnewline
+\textbf{Nov 29th} & \textbf{Project Presentation}\tabularnewline
+\bottomrule
+\end{longtable}
+
+\section{End goals}\label{end-goals}
+
+\begin{itemize}
+\tightlist
+\item
+  Compare and analyze the efficiency and differences in output of
+  various deblurring techniques
+\item
+  Present and expand \emph{low rank image approximation}
+\item
+  Attempt a GPU implementation and compare perfomance gains.
+\end{itemize}
+
+\end{document}
