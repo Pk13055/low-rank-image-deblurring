@@ -1,0 +1,327 @@
+\title{Image deblurring using low rank approximation}
+\author{Pratik K}
+
+\begin{document}
+
+\maketitle
+
+\hypertarget{introduction}{%
+\section{Introduction}\label{introduction}}
+
+This project presents an efficient method to image deblurring, making
+use of a secondary low-exposure (\emph{short exposure}) image to
+complement and enhance the auto-exposure base image. Short exposure
+image is enhanced using the low rank approximation of the auto-exposure
+image (without any external parameters). This technique offers a much
+better qualitative results at a better efficiency as well. However, this
+technique relies on having a short-exposure image being available.
+
+\hypertarget{overview}{%
+\section{Overview}\label{overview}}
+
+There are three parts to the pipeline:
+
+\begin{itemize}
+  \tightlist
+  \item
+  Image capture
+  \item
+  SVD/AIC of normal image
+  \item
+  Capture and superimposition of the brightness and contrast information
+  on the low rank, non-blurred image
+  \item
+  Post-processing enhancement
+\end{itemize}
+
+\begin{figure}
+  \begin{center}
+  \includegraphics{https://media.springernature.com/lw785/springer-static/image/art\%3A10.1007\%2Fs11554-015-0539-x/MediaObjects/11554_2015_539_Fig3_HTML.gif}
+  \caption{deblurring\_pipeline}
+  \end{center}
+\end{figure}
+
+\hypertarget{io-process}{%
+\subsection{I/O Process}\label{io-process}}
+
+The input to the pipeline is two images, a short exposure image and a
+normal auto-exposure image. Two processess have been discussed to
+capture the \emph{extra}, but \textbf{essential} short-exposure image.
+
+\begin{figure}
+  \begin{center}
+  \includegraphics{https://cdn-7.nikon-cdn.com/Images/Learn-Explore/Photography-Techniques/2009/Basics-of-Exposure/Media/2_Its-a-matter-of-balance-with-exposures.jpg}
+  \caption{Exposure\_comparison}
+  \end{center}
+\end{figure}
+
+To capture two images consecutively and also with different exposures or
+shutter speed settings, the RGB raw image data are captured noting that
+in a conventional image acquisition pipeline, an image goes through
+several stages to complete its data transfer through a buffer and an
+encoder. This leads to delays and such delays may cause not capturing
+the same scene area due to handshakes. Thus, in the implementation, a
+camera with Mobile Industry Processor Interface-Camera Serial Interface
+(MIPI-CSI) was used to capture images.
+
+\begin{figure}
+  \begin{center}
+  \includegraphics{https://media.springernature.com/lw785/springer-static/image/art\%3A10.1007\%2Fs11554-015-0539-x/MediaObjects/11554_2015_539_Figa_HTML.gif}
+  \caption{sync\_capture}
+  \end{center}
+\end{figure}
+
+\hypertarget{sequential-capture}{%
+\subsubsection{Sequential Capture}\label{sequential-capture}}
+
+One option is to capture the images one after the other. Now
+logistically speaking, this process is easy. After the subject is
+captured normally (\emph{by human trigger}), a secondary image can be
+captured programmatically, without any human intervention.
+
+However, this method has a couple of caveats; the scene may change
+between shots. This is very unlikely given the automated, almost
+immediate trigger of the secondary shot, but could end up reproducing an
+image with some reconstruction error.
+
+\hypertarget{subset-capture}{%
+\subsubsection{Subset Capture}\label{subset-capture}}
+
+Another, slightly more interesting approach proposed was to have the
+short exposure image captured \textbf{within} the exposure bracket of
+the original image itself.
+
+MIPI has become a commonly used interface protocol on mobile devices as
+it provides scalable serial interface for image data transfer to
+host/CPU processor. This way, the image raw data are directly mapped
+into a memory stack by enabling the camera output port. The memory size
+can be pre-defined based on a user-defined image size. This way delays
+caused by the data transfer are avoided. The pre-defined memory is also
+synchronized to the camera. The encoder and buffer are both deactivated.
+When the first image is captured, the image data are simultaneously
+mapped into the memory without a time delay. Next, the camera control
+parameters are updated using a different shutter speed. Meanwhile, the
+camera port is connected to a second memory space. As a result, two
+consecutive images get captured, each corresponding to a different
+exposure or shutter speed setting, while not suffering from the delay
+caused by the data buffer and encoder.
+
+\begin{figure}
+  \begin{center}
+  \includegraphics{https://media.springernature.com/lw785/springer-static/image/art\%3A10.1007\%2Fs11554-015-0539-x/MediaObjects/11554_2015_539_Fig2_HTML.gif}
+  \caption{timing\_diagram}
+  \end{center}
+\end{figure}
+
+\hypertarget{method}{%
+\section{Method}\label{method}}
+
+To abstract out the process, essentially the algorithm involves an
+application of a low rank representation (containing information about
+brightness and contrast) of the original image onto the low exposure
+image. Given that the low-exposure image will not be blurred (\emph{or
+atleast, not as significantly}), application of brightness and contrast
+onto this image will result in a reconstruction that is far superior (in
+terms of sharpness) to the original auto-exposed image, \textbf{whislt}
+maintaining the same ROI and frame that the original captured.
+
+\begin{figure}
+  \begin{center}
+  \includegraphics{https://www.spiedigitallibrary.org/ContentImages/Proceedings/9400/940008/FigureImages/00009_psisdg9400_940008_page_4_2.jpg}
+  \caption{method\_algorithm}
+  \end{center}
+\end{figure}
+
+\hypertarget{svd-low-rank-representation}{%
+\subsection{SVD \& Low rank
+representation}\label{svd-low-rank-representation}}
+
+\begin{itemize}
+  \tightlist
+  \item
+  Low rank matrix approximation using SVD (support vector decomposition)
+  \item
+  Find appropriate number of eigenvectors using AIC (Akaike Information
+  Criterion) from the normal, auto-exposure blurred image.
+  \item
+  This approximation image remains undistorted and carries only the
+  brightness and contrast information.
+\end{itemize}
+
+\begin{figure}
+  \begin{center}
+  \includegraphics{https://www.pentaxforums.com/content/uploads/files/23434/p99998/combinedexposures.jpg}
+  \caption{similar\_approach}
+  \end{center}
+\end{figure}
+
+The low rank approximation can be simplified as follows:
+\[\widehat{I} = E + R + Z \] where E represents a low rank approximation
+image, R the detail content of the image and Z the blurring effect. In
+general, E does not suffer from the blurring effect as it is rank
+deficient: \[rank(E) = p < m\]
+
+Using the AIC, a proper estimate for the number of eigenvalues required
+is made, without any prior estimation or external help.
+
+Once the appropriate \texttt{p} is calculated, the low rank
+approximation \(E\) is obtained.
+
+\hypertarget{eigenvalue-transformation}{%
+\subsection{Eigenvalue Transformation}\label{eigenvalue-transformation}}
+
+After obtaining the number of eigenvalues of the low rank approximation
+image, the next step consists of adjusting the eigenvalues to enhance
+the brightness and contrast of the short-exposure image. It is important
+to keep the original singular value ratio of the short-exposure image to
+avoid introducing distortions. This is achieved by considering this
+enhancement ratio based on the eigenvalues of \$I\^{}s.
+
+\hypertarget{experimental-setup}{%
+\section{Experimental Setup}\label{experimental-setup}}
+
+Five sets of 15 images were captured with different image resolutions:
+
+\begin{itemize}
+  \tightlist
+  \item
+  Set A (\texttt{800x600})
+  \item
+  Set B (\texttt{960x720})
+  \item
+  Set C (\texttt{1024x768})
+  \item
+  Set D (\texttt{1296x864})
+  \item
+  Set E (\texttt{2592x1936})
+\end{itemize}
+
+The developed technique was implemented on both a CPU and a GPU. The
+most of memory consumption is from the image storage on GPU and CPU, and
+memory usage takes (2\emph{3}m*n) bytes on both GPU and CPU sides.
+
+Three images were consecutively captured from 60 different scenes. The
+first image was captured with a user-defined exposure or shutter speed
+with no handshake, while the second and the third images were captured
+with a short and a user-defined exposure or shutter speed in the
+presence of handshake movements. The first image was used as the
+reference. The resolution of the captured images was \texttt{1024*768},
+and the two short shutter speeds were \texttt{1/100s} and
+\texttt{1/200s}.
+
+\hypertarget{results}{%
+\section{Results}\label{results}}
+
+As can be seen, this approach does not require any search iterations for
+finding the enhancement parameters as done in the ATC technique. In
+other words, the information of the blurred image is directly used to
+enhance the short-exposure image.
+
+Having gone through the problem statement and overall algorithm and
+procedure, one of the main focus was an efficient GPU implementation of
+the algorithm to highlight it's efficiency and improvements over
+traditional algorithms. For this purpose, I have written two codes:
+
+\begin{itemize}
+  \tightlist
+  \item
+  One Python base code for comparison (\texttt{opencv})
+  \item
+  One GPU based CUDA-powered C++ code. (\texttt{opencv-GPU})
+\end{itemize}
+
+\hypertarget{dependencies}{%
+\subsection{Dependencies}\label{dependencies}}
+
+For the most part, the code is a \emph{vanilla} implementation using
+standard image processing and machine learning libraries.
+
+\hypertarget{python}{%
+\subsubsection{Python}\label{python}}
+
+For the Python based implementation, the following libraries have been
+used:
+
+\begin{itemize}
+  \tightlist
+  \item
+  \texttt{numpy}: Basic matrix computations and \texttt{SVD}
+  \item
+  \texttt{opencv}: Image based IO and processing
+  \item
+  \texttt{matplotlib}: Plotting results and graphs
+\end{itemize}
+
+\hypertarget{c}{%
+\subsubsection{C++}\label{c}}
+
+For the C++, GPU based approach, two approaches were considered. One was
+an STL based non-openCV implementation and another openCV, CUDA based
+implementation.
+
+\begin{itemize}
+  \tightlist
+  \item
+  \texttt{CUDA}: Basic library for GPU interaction (version 9.0)
+  \item
+  \texttt{cuDNN}: Supplementary library for CUDA support (version 9.0)
+  \item
+  \texttt{openCV}: for image reading and other basic operations
+  \item
+  \texttt{thrust}: For high level abstraction on GPU based operations
+\end{itemize}
+
+\hypertarget{image-tests}{%
+\subsection{Image tests}\label{image-tests}}
+
+\includegraphics{https://media.springernature.com/original/springer-static/image/art\%3A10.1007\%2Fs11554-015-0539-x/MediaObjects/11554_2015_539_Fig5_HTML.gif}
+
+\hypertarget{timings-tests}{%
+\subsection{Timings tests}\label{timings-tests}}
+
+\includegraphics{https://media.springernature.com/lw785/springer-static/image/art\%3A10.1007\%2Fs11554-015-0539-x/MediaObjects/11554_2015_539_Fig4_HTML.gif}
+
+\hypertarget{conclusion}{%
+\section{Conclusion}\label{conclusion}}
+
+As seen from the results above, the results in the paper were verified,
+within experimental constraints and error. This method, as compared to
+the other deblurring techniques is efficient, both in the data
+acquisition process and computation. Because most computation is done on
+the GPU, further room for advancement could be in the buffer transfer,
+which isn't an issue if specialized hardware (\emph{as mentioned
+earlier}) is used.
+
+The findings from this paper could be used to generate a model that
+\emph{simulates} the low exposure image, given a \texttt{RAW} image.
+Extracting information from the same, on the basis of say, exposure,
+shutter speed, etc, could lead to the elimination of the secondary photo
+requirement.
+
+\hypertarget{acknowledgments}{%
+\section{Acknowledgments}\label{acknowledgments}}
+
+Firstly, I am thankful to the course instructor, Dr Ravi Kiran, and the
+TAs for giving me this opportunity to work on a new vision problem, and
+expand my knowledge in GPU/CUDA programming and image processing
+techniques. I have used the following resources (\emph{some of which
+have been bundled in
+\href{https://github.com/Pk13055/low-rank-image-deblurring}{the repo}}):
+
+\begin{itemize}
+  \tightlist
+  \item
+  \href{https://link.springer.com/content/pdf/10.1007\%2Fs11554-015-0539-x.pdf}{Original
+  Paper}
+  \item
+  \href{https://link.springer.com/article/10.1007\%2Fs11554-015-0539-x}{Deblurring
+  Article}
+  \item
+  \href{https://docs.nvidia.com/cuda/thrust/index.html?fbclid=IwAR2_Rv2_B16zucAngZQHROkZcOPTcs4_MwA-GTHpiESKDWa88eTbU4T5SVA}{CUDA
+  (\emph{Thrust}) user guide}
+  \item
+  \href{https://docs.opencv.org/2.4/modules/gpu/doc/gpu.html}{OpenCV GPU
+  guide}
+\end{itemize}
+
+\end{document}
